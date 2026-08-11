@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, processSaleTransaction } from '@/lib/db';
 import { Product, CartItem, ProductVariant, Sale } from '@/lib/types';
@@ -16,6 +16,57 @@ export default function POSPage() {
   const [activeMultiplier, setActiveMultiplier] = useState<number>(1);
   const [isPaymentOpen, setIsPaymentOpen] = useState<boolean>(false);
   const [completedSale, setCompletedSale] = useState<Sale | null>(null);
+  const [isHydrated, setIsHydrated] = useState<boolean>(false);
+
+  // Restore cart & multiplier from localStorage on initial mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const savedCart = localStorage.getItem('bbs_active_pos_cart');
+        if (savedCart) {
+          const parsed = JSON.parse(savedCart);
+          if (Array.isArray(parsed)) {
+            setCart(parsed);
+          }
+        }
+        const savedMultiplier = localStorage.getItem('bbs_pos_multiplier');
+        if (savedMultiplier) {
+          const multNum = parseInt(savedMultiplier, 10);
+          if (multNum >= 1 && multNum <= 10) {
+            setActiveMultiplier(multNum);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load active cart draft:', err);
+      } finally {
+        setIsHydrated(true);
+      }
+    }
+  }, []);
+
+  // Save cart draft to localStorage whenever cart updates
+  useEffect(() => {
+    if (isHydrated && typeof window !== 'undefined') {
+      try {
+        if (cart.length > 0) {
+          localStorage.setItem('bbs_active_pos_cart', JSON.stringify(cart));
+        } else {
+          localStorage.removeItem('bbs_active_pos_cart');
+        }
+      } catch (err) {
+        console.error('Failed to persist cart draft:', err);
+      }
+    }
+  }, [cart, isHydrated]);
+
+  // Save active multiplier setting
+  useEffect(() => {
+    if (isHydrated && typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('bbs_pos_multiplier', activeMultiplier.toString());
+      } catch {}
+    }
+  }, [activeMultiplier, isHydrated]);
 
   // Live query products
   const products = useLiveQuery(async () => {
@@ -93,6 +144,9 @@ export default function POSPage() {
 
   const handleClearCart = () => {
     setCart([]);
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('bbs_active_pos_cart');
+    }
   };
 
   // Process Completed Sale
@@ -110,6 +164,9 @@ export default function POSPage() {
     const recordedSale = await processSaleTransaction(saleData);
     setIsPaymentOpen(false);
     setCart([]);
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('bbs_active_pos_cart');
+    }
     setCompletedSale(recordedSale);
   };
 
