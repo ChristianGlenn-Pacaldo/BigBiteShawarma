@@ -3,9 +3,8 @@
 import React, { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/lib/db';
-import { Expense } from '@/lib/types';
 import { formatPHP, formatDateOnly } from '@/lib/utils';
-import { DollarSign, Plus, Trash2, Calendar } from 'lucide-react';
+import { DollarSign, Plus, Trash2 } from 'lucide-react';
 import ExpenseModal from '@/components/ExpenseModal';
 
 export default function ExpensesPage() {
@@ -37,7 +36,7 @@ export default function ExpensesPage() {
             Store Expense Tracking
           </h2>
           <p className="text-xs text-slate-400 mt-1 font-medium">
-            Record utilities, rent, supplies, wages, & operational costs for profit calculation
+            Record utilities, rent, supplies, wages, &amp; operational costs for profit calculation
           </p>
         </div>
 

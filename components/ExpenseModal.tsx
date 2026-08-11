@@ -54,8 +54,9 @@ export default function ExpenseModal({ onSuccess, onClose }: ExpenseModalProps) 
         notes: notes.trim()
       });
       onSuccess();
-    } catch (err: any) {
-      setError(err.message || 'Failed to save expense');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to save expense';
+      setError(msg);
       setIsSubmitting(false);
     }
   };
@@ -76,7 +77,7 @@ export default function ExpenseModal({ onSuccess, onClose }: ExpenseModalProps) 
           </div>
           <div>
             <h2 className="text-xl font-extrabold text-slate-100">Add Store Expense</h2>
-            <p className="text-xs text-slate-400">Track utilities, rent, supplies, & wages</p>
+            <p className="text-xs text-slate-400">Track utilities, rent, supplies, &amp; wages</p>
           </div>
         </div>
 

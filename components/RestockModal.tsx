@@ -4,7 +4,6 @@ import React, { useState } from 'react';
 import { PlusCircle, X, PackagePlus } from 'lucide-react';
 import { Ingredient } from '@/lib/types';
 import { restockIngredient } from '@/lib/db';
-import { formatPHP } from '@/lib/utils';
 
 interface RestockModalProps {
   ingredients: Ingredient[];
@@ -56,8 +55,9 @@ export default function RestockModal({
         staffName
       );
       onSuccess();
-    } catch (err: any) {
-      setError(err.message || 'Failed to restock ingredient');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to restock ingredient';
+      setError(msg);
       setIsSubmitting(false);
     }
   };

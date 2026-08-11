@@ -3,8 +3,8 @@
 import React, { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/lib/db';
-import { formatPHP, formatDateOnly, formatQuantity } from '@/lib/utils';
-import { TrendingUp, DollarSign, Download, Calendar, Award, PieChart, Layers } from 'lucide-react';
+import { formatPHP, formatQuantity } from '@/lib/utils';
+import { Download, Calendar, Award, Layers } from 'lucide-react';
 
 export default function ReportsPage() {
   const [rangeType, setRangeType] = useState<'today' | 'yesterday' | 'week' | 'month' | 'custom'>('today');
@@ -151,10 +151,10 @@ export default function ReportsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900 p-6 rounded-3xl border border-slate-800 shadow-xl">
         <div>
           <h2 className="text-2xl font-black tracking-tight text-white flex items-center gap-2">
-            Financial & Analytics Reports
+            Financial &amp; Analytics Reports
           </h2>
           <p className="text-xs text-slate-400 mt-1 font-medium">
-            Daily, weekly, & monthly profit analysis, best sellers, and raw ingredient consumption
+            Daily, weekly, &amp; monthly profit analysis, best sellers, and raw ingredient consumption
           </p>
         </div>
 

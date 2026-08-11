@@ -1,20 +1,17 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Banknote, X, Check, Delete, ArrowRight, User } from 'lucide-react';
+import { Banknote, X, Delete, ArrowRight, User } from 'lucide-react';
 import { formatPHP } from '@/lib/utils';
-import { CartItem } from '@/lib/types';
 import confetti from 'canvas-confetti';
 
 interface PaymentModalProps {
-  cart: CartItem[];
   totalAmount: number;
   onCompleteSale: (paymentAmount: number, changeAmount: number, staffName: string) => Promise<void>;
   onClose: () => void;
 }
 
 export default function PaymentModal({
-  cart,
   totalAmount,
   onCompleteSale,
   onClose,
@@ -59,18 +56,18 @@ export default function PaymentModal({
 
     try {
       setIsSubmitting(true);
-      // Trigger celebratory confetti effect
       try {
         confetti({
           particleCount: 60,
           spread: 70,
           origin: { y: 0.6 }
         });
-      } catch (e) {}
+      } catch {}
 
       await onCompleteSale(paymentNum, changeNum, staffName);
-    } catch (err: any) {
-      setError(err.message || 'Failed to complete sale transaction');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to complete sale transaction';
+      setError(msg);
       setIsSubmitting(false);
     }
   };
@@ -91,7 +88,7 @@ export default function PaymentModal({
           </div>
           <div>
             <h2 className="text-xl font-extrabold text-slate-100">Cash Payment</h2>
-            <p className="text-xs text-slate-400">Complete sale & record transaction</p>
+            <p className="text-xs text-slate-400">Complete sale &amp; record transaction</p>
           </div>
         </div>
 

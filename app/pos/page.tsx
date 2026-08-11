@@ -5,7 +5,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db, processSaleTransaction } from '@/lib/db';
 import { Product, CartItem, ProductVariant, Sale } from '@/lib/types';
 import { formatPHP } from '@/lib/utils';
-import { ShoppingCart, Plus, Minus, Trash2, Banknote, Search, AlertCircle, Sparkles, RefreshCw } from 'lucide-react';
+import { ShoppingCart, Plus, Minus, Trash2, Banknote, Search, Sparkles } from 'lucide-react';
 import PaymentModal from '@/components/PaymentModal';
 import ReceiptModal from '@/components/ReceiptModal';
 
@@ -17,13 +17,9 @@ export default function POSPage() {
   const [isPaymentOpen, setIsPaymentOpen] = useState<boolean>(false);
   const [completedSale, setCompletedSale] = useState<Sale | null>(null);
 
-  // Live query products & ingredients
+  // Live query products
   const products = useLiveQuery(async () => {
     return await db.products.where('status').equals('active').toArray();
-  }, []);
-
-  const ingredients = useLiveQuery(async () => {
-    return await db.ingredients.toArray();
   }, []);
 
   const categories = ['All', 'Shawarma', 'Sides', 'Beverages'];
@@ -38,7 +34,6 @@ export default function POSPage() {
   // Cart Calculations
   const totalAmount = cart.reduce((sum, item) => sum + item.subtotal, 0);
   const totalItemsCount = cart.reduce((sum, item) => sum + item.quantity, 0);
-  const totalCost = cart.reduce((sum, item) => sum + (item.cost * item.quantity), 0);
 
   // Add product to cart with active multiplier quantity
   const handleAddToCart = (product: Product, variant: ProductVariant) => {
@@ -94,10 +89,6 @@ export default function POSPage() {
         })
         .filter(Boolean) as CartItem[];
     });
-  };
-
-  const handleRemoveItem = (productId: string, variant: ProductVariant) => {
-    setCart(prev => prev.filter(item => !(item.productId === productId && item.variant === variant)));
   };
 
   const handleClearCart = () => {
@@ -278,7 +269,7 @@ export default function POSPage() {
                 <p className="text-xs mt-1 text-slate-500">Tap product cards on the left to add items</p>
               </div>
             ) : (
-              cart.map((item, idx) => (
+              cart.map((item) => (
                 <div
                   key={`${item.productId}-${item.variant}`}
                   className="bg-slate-950 p-3.5 rounded-2xl border border-slate-800 flex items-center justify-between gap-3 shadow-inner"

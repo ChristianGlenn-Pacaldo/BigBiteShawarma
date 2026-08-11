@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, exportDatabaseBackup, importDatabaseBackup, resetDatabaseToSeed } from '@/lib/db';
 import { StoreSettings } from '@/lib/types';
-import { Settings, Save, Download, Upload, RotateCcw, Shield, Check, AlertTriangle } from 'lucide-react';
+import { Settings, Save, Download, Upload, RotateCcw, Shield, AlertTriangle } from 'lucide-react';
 import PinModal from '@/components/PinModal';
 
 export default function SettingsPage() {
@@ -13,10 +13,11 @@ export default function SettingsPage() {
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [statusMessage, setStatusMessage] = useState<{ text: string; isError?: boolean } | null>(null);
 
-  const settings = useLiveQuery(async () => {
-    const list = await db.settings.toArray();
-    return list[0];
-  }, []) || {
+  const settingsList = useLiveQuery(async () => {
+    return await db.settings.toArray();
+  }, []);
+
+  const settings = settingsList?.[0] || {
     storeName: 'BIG BITE SHAWARMA',
     storeAddress: 'Main St. Branch, Food Park',
     contactNumber: '0917-123-4567',
@@ -24,7 +25,7 @@ export default function SettingsPage() {
     receiptFooter: 'Thank you for dining with us! Love at First Bite',
     ownerPin: '1234',
     staffPin: '0000',
-    theme: 'dark',
+    theme: 'dark' as const,
     lowStockGlobalThreshold: 5
   };
 
@@ -32,10 +33,10 @@ export default function SettingsPage() {
 
   // Sync state when DB loads
   React.useEffect(() => {
-    if (settings) {
-      setFormState(settings);
+    if (settingsList && settingsList.length > 0) {
+      setFormState(settingsList[0]);
     }
-  }, [settings]);
+  }, [settingsList]);
 
   const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,8 +45,9 @@ export default function SettingsPage() {
       await db.settings.add(formState);
       setStatusMessage({ text: 'Store settings saved successfully!' });
       setTimeout(() => setStatusMessage(null), 3000);
-    } catch (err: any) {
-      setStatusMessage({ text: err.message || 'Failed to save settings', isError: true });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to save settings';
+      setStatusMessage({ text: msg, isError: true });
     }
   };
 
@@ -63,8 +65,9 @@ export default function SettingsPage() {
       document.body.removeChild(link);
       setStatusMessage({ text: 'Database backup downloaded successfully!' });
       setTimeout(() => setStatusMessage(null), 3000);
-    } catch (err: any) {
-      setStatusMessage({ text: 'Export failed: ' + err.message, isError: true });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Export failed';
+      setStatusMessage({ text: 'Export failed: ' + msg, isError: true });
     }
   };
 
@@ -86,8 +89,9 @@ export default function SettingsPage() {
       setPendingFile(null);
       setStatusMessage({ text: 'Database restored successfully from backup file!' });
       setTimeout(() => setStatusMessage(null), 4000);
-    } catch (err: any) {
-      setStatusMessage({ text: 'Import failed: ' + err.message, isError: true });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Import failed';
+      setStatusMessage({ text: 'Import failed: ' + msg, isError: true });
     }
   };
 
@@ -96,8 +100,9 @@ export default function SettingsPage() {
       await resetDatabaseToSeed();
       setStatusMessage({ text: 'Database reset to initial sample seed data!' });
       setTimeout(() => setStatusMessage(null), 4000);
-    } catch (err: any) {
-      setStatusMessage({ text: 'Reset failed: ' + err.message, isError: true });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Reset failed';
+      setStatusMessage({ text: 'Reset failed: ' + msg, isError: true });
     }
   };
 
@@ -118,10 +123,10 @@ export default function SettingsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900 p-6 rounded-3xl border border-slate-800 shadow-xl">
         <div>
           <h2 className="text-2xl font-black tracking-tight text-white flex items-center gap-2">
-            Store & System Settings
+            Store &amp; System Settings
           </h2>
           <p className="text-xs text-slate-400 mt-1 font-medium">
-            Customize receipt branding, security PINs, offline database backups, & restore tools
+            Customize receipt branding, security PINs, offline database backups, &amp; restore tools
           </p>
         </div>
       </div>
@@ -140,7 +145,7 @@ export default function SettingsPage() {
       <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl">
         <h3 className="text-lg font-extrabold text-slate-100 mb-4 flex items-center gap-2">
           <Settings className="w-5 h-5 text-amber-400" />
-          <span>Store Information & Receipt Branding</span>
+          <span>Store Information &amp; Receipt Branding</span>
         </h3>
 
         <form onSubmit={handleSaveSettings} className="space-y-4">
@@ -237,7 +242,7 @@ export default function SettingsPage() {
       <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-6">
         <h3 className="text-lg font-extrabold text-slate-100 flex items-center gap-2">
           <Shield className="w-5 h-5 text-emerald-400" />
-          <span>Offline Data Backup & Disaster Recovery</span>
+          <span>Offline Data Backup &amp; Disaster Recovery</span>
         </h3>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

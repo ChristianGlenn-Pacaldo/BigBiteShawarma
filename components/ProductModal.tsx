@@ -44,7 +44,7 @@ export default function ProductModal({ product, ingredients, onSuccess, onClose 
     setRecipe(prev => prev.filter((_, i) => i !== index));
   };
 
-  const handleRecipeChange = (index: number, field: keyof RecipeItem, value: any) => {
+  const handleRecipeChange = (index: number, field: keyof RecipeItem, value: string | number) => {
     setRecipe(prev => {
       const copy = [...prev];
       if (field === 'ingredientId') {
@@ -106,8 +106,9 @@ export default function ProductModal({ product, ingredients, onSuccess, onClose 
       }
 
       onSuccess();
-    } catch (err: any) {
-      setError(err.message || 'Failed to save product');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to save product';
+      setError(msg);
       setIsSubmitting(false);
     }
   };
@@ -264,7 +265,7 @@ export default function ProductModal({ product, ingredients, onSuccess, onClose 
 
             {recipe.length === 0 ? (
               <div className="text-center py-6 border border-dashed border-slate-800 rounded-2xl text-xs text-slate-500">
-                No ingredients attached to this product yet. Click "+ Add Ingredient" above.
+                No ingredients attached to this product yet. Click &quot;+ Add Ingredient&quot; above.
               </div>
             ) : (
               <div className="space-y-2">
@@ -341,7 +342,7 @@ export default function ProductModal({ product, ingredients, onSuccess, onClose 
             className="w-full bg-gradient-to-r from-brand-600 via-amber-500 to-amber-600 text-white font-extrabold py-3.5 rounded-2xl shadow-xl hover:brightness-110 active:scale-98 transition flex items-center justify-center gap-2"
           >
             <Check className="w-5 h-5" />
-            <span>SAVE PRODUCT & RECIPE</span>
+            <span>SAVE PRODUCT &amp; RECIPE</span>
           </button>
         </form>
       </div>

@@ -29,8 +29,9 @@ export default function VoidModal({ sale, staffName, onSuccess, onClose }: VoidM
       setIsSubmitting(true);
       await voidSaleTransaction(sale.id, reason.trim(), staffName);
       onSuccess();
-    } catch (err: any) {
-      setError(err.message || 'Failed to void transaction');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to void transaction';
+      setError(msg);
       setIsSubmitting(false);
     }
   };

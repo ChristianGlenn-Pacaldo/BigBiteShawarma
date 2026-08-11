@@ -5,7 +5,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db, adjustIngredientStock } from '@/lib/db';
 import { Ingredient, MovementType } from '@/lib/types';
 import { formatPHP, formatDate, formatQuantity } from '@/lib/utils';
-import { Boxes, PackagePlus, AlertTriangle, Search, History, Sliders, X, Check } from 'lucide-react';
+import { Boxes, PackagePlus, Search, History, Sliders, X, Check } from 'lucide-react';
 import RestockModal from '@/components/RestockModal';
 
 export default function InventoryPage() {
@@ -70,7 +70,7 @@ export default function InventoryPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900 p-6 rounded-3xl border border-slate-800 shadow-xl">
         <div>
           <h2 className="text-2xl font-black tracking-tight text-white flex items-center gap-2">
-            Inventory & Ingredient Management
+            Inventory &amp; Ingredient Management
           </h2>
           <p className="text-xs text-slate-400 mt-1 font-medium">
             Monitor raw ingredients, restock supplies, record waste, and trace stock movement history
@@ -249,7 +249,7 @@ export default function InventoryPage() {
             <table className="w-full text-left text-xs text-slate-300">
               <thead className="text-[11px] text-slate-400 uppercase bg-slate-950 border-b border-slate-800">
                 <tr>
-                  <th className="p-3">Date & Time</th>
+                  <th className="p-3">Date &amp; Time</th>
                   <th className="p-3">Ingredient</th>
                   <th className="p-3">Type</th>
                   <th className="p-3">Quantity Change</th>

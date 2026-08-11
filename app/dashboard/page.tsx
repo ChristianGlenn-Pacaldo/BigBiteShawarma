@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/lib/db';
 import { formatPHP, formatDate } from '@/lib/utils';
-import { DollarSign, ShoppingBag, Package, TrendingUp, AlertTriangle, PackageX, PlusCircle, ArrowUpRight, Boxes, FileSpreadsheet } from 'lucide-react';
+import { DollarSign, ShoppingBag, TrendingUp, AlertTriangle, PackageX, ArrowUpRight, Boxes } from 'lucide-react';
 import RestockModal from '@/components/RestockModal';
 import ExpenseModal from '@/components/ExpenseModal';
 
@@ -59,7 +59,7 @@ export default function DashboardPage() {
             Store Overview Dashboard
           </h2>
           <p className="text-xs text-slate-400 mt-1 font-medium">
-            Real-time daily sales, inventory levels, & profit calculations
+            Real-time daily sales, inventory levels, &amp; profit calculations
           </p>
         </div>
 
@@ -100,7 +100,7 @@ export default function DashboardPage() {
           <div className="flex justify-between items-start mb-3">
             <div>
               <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">
-                Today's Sales
+                Today&apos;s Sales
               </span>
               <span className="text-3xl font-black text-amber-400 tracking-tight mt-1 block">
                 {formatPHP(salesTotal)}
@@ -249,7 +249,7 @@ export default function DashboardPage() {
       {/* Today's Transactions Log Table */}
       <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-xl">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="font-extrabold text-base text-slate-100">Today's Transactions</h3>
+          <h3 className="font-extrabold text-base text-slate-100">Today&apos;s Transactions</h3>
           <Link
             href="/sales"
             className="text-xs font-bold text-amber-400 hover:text-amber-300 flex items-center gap-1"
@@ -261,7 +261,7 @@ export default function DashboardPage() {
 
         {todaySales.length === 0 ? (
           <div className="text-center py-8 text-slate-500 text-xs">
-            No sales recorded yet today. Click "NEW POS SALE" to make a sale!
+            No sales recorded yet today. Click &quot;NEW POS SALE&quot; to make a sale!
           </div>
         ) : (
           <div className="overflow-x-auto">
