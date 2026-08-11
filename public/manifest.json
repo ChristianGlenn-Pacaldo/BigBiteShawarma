@@ -1,0 +1,22 @@
+{
+  "short_name": "BigBite POS",
+  "name": "Big Bite Shawarma - POS & Inventory",
+  "description": "Offline-first Point-of-Sale and Inventory Management System for Big Bite Shawarma",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#0f172a",
+  "theme_color": "#e45719",
+  "display": "standalone",
+  "orientation": "any"
+}
