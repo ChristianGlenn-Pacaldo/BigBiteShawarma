@@ -3,9 +3,11 @@
 import React, { useState } from 'react';
 import { Banknote, X, Delete, ArrowRight, User } from 'lucide-react';
 import { formatPHP } from '@/lib/utils';
+import { CartItem } from '@/lib/types';
 import confetti from 'canvas-confetti';
 
 interface PaymentModalProps {
+  cart?: CartItem[];
   totalAmount: number;
   onCompleteSale: (paymentAmount: number, changeAmount: number, staffName: string) => Promise<void>;
   onClose: () => void;
