@@ -1,10 +1,14 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Wifi, WifiOff, Download, UserCheck, Shield, Clock } from 'lucide-react';
+import { Wifi, WifiOff, Download, UserCheck, Shield, Clock, Play, Flag } from 'lucide-react';
 import { useOnlineStatus, usePWAInstall } from '@/lib/pwa';
 import { UserRole } from '@/lib/types';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { db } from '@/lib/db';
 import PinModal from './PinModal';
+import StartShiftModal from './StartShiftModal';
+import EndShiftModal from './EndShiftModal';
 
 interface HeaderProps {
   currentRole: UserRole;
@@ -17,6 +21,14 @@ export default function Header({ currentRole, onRoleChange }: HeaderProps) {
   const [timeStr, setTimeStr] = useState<string>('');
   const [isPinModalOpen, setIsPinModalOpen] = useState(false);
   const [targetRole, setTargetRole] = useState<UserRole>('OWNER');
+
+  const [startShiftModalOpen, setStartShiftModalOpen] = useState<boolean>(false);
+  const [endShiftModalOpen, setEndShiftModalOpen] = useState<boolean>(false);
+
+  // Live Query Active Shift
+  const activeShift = useLiveQuery(async () => {
+    return await db.shifts.where('status').equals('active').first();
+  }, []);
 
   useEffect(() => {
     const updateTime = () => {
@@ -37,11 +49,9 @@ export default function Header({ currentRole, onRoleChange }: HeaderProps) {
 
   const handleRoleToggle = () => {
     if (currentRole === 'STAFF') {
-      // Switching to OWNER requires PIN
       setTargetRole('OWNER');
       setIsPinModalOpen(true);
     } else {
-      // Switching back to STAFF directly allowed
       onRoleChange('STAFF');
     }
   };
@@ -64,7 +74,6 @@ export default function Header({ currentRole, onRoleChange }: HeaderProps) {
                 alt="Big Bite Shawarma"
                 className="w-full h-full object-cover rounded-[10px]"
                 onError={(e) => {
-                  // Fallback icon if image loading
                   (e.target as HTMLElement).style.display = 'none';
                 }}
               />
@@ -84,11 +93,43 @@ export default function Header({ currentRole, onRoleChange }: HeaderProps) {
             </div>
           </div>
 
-          {/* Center Info - Clock & Network Status */}
-          <div className="flex items-center gap-3">
+          {/* Center Info - Clock, Network Status, & Shift Controls */}
+          <div className="flex items-center gap-2">
+            
+            {/* Shift Status Indicator & Control Button */}
+            {activeShift ? (
+              <div className="flex items-center gap-2">
+                <div className="hidden sm:flex items-center gap-1.5 bg-emerald-950/80 border border-emerald-800/80 text-emerald-400 px-3 py-1 rounded-full text-xs font-bold shadow-inner">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                  <span>SHIFT ACTIVE ({activeShift.staff})</span>
+                </div>
+                <button
+                  onClick={() => setEndShiftModalOpen(true)}
+                  className="flex items-center gap-1.5 bg-gradient-to-r from-red-600 to-brand-600 text-white font-extrabold text-xs px-3 py-1.5 rounded-lg shadow hover:brightness-110 active:scale-95 transition"
+                >
+                  <Flag className="w-3.5 h-3.5" />
+                  <span>END SHIFT</span>
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <div className="hidden sm:flex items-center gap-1.5 bg-slate-800 text-slate-400 px-3 py-1 rounded-full text-xs font-bold border border-slate-700">
+                  <span className="w-2 h-2 rounded-full bg-slate-500" />
+                  <span>NO ACTIVE SHIFT</span>
+                </div>
+                <button
+                  onClick={() => setStartShiftModalOpen(true)}
+                  className="flex items-center gap-1.5 bg-gradient-to-r from-emerald-600 to-teal-500 text-white font-extrabold text-xs px-3 py-1.5 rounded-lg shadow hover:brightness-110 active:scale-95 transition"
+                >
+                  <Play className="w-3.5 h-3.5 ml-0.5" />
+                  <span>START SHIFT</span>
+                </button>
+              </div>
+            )}
+
             {/* Online / Offline Status Badge */}
             <div
-              className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${
+              className={`hidden md:flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${
                 isOnline
                   ? 'bg-emerald-950/60 text-emerald-400 border-emerald-800/60'
                   : 'bg-amber-950/80 text-amber-400 border-amber-800/80 animate-pulse'
@@ -97,19 +138,18 @@ export default function Header({ currentRole, onRoleChange }: HeaderProps) {
               {isOnline ? (
                 <>
                   <Wifi className="w-3.5 h-3.5 text-emerald-400" />
-                  <span className="hidden sm:inline">ONLINE (OFFLINE-READY)</span>
-                  <span className="sm:hidden">ONLINE</span>
+                  <span>ONLINE</span>
                 </>
               ) : (
                 <>
                   <WifiOff className="w-3.5 h-3.5 text-amber-400" />
-                  <span>OFFLINE MODE</span>
+                  <span>OFFLINE</span>
                 </>
               )}
             </div>
 
             {/* Live Clock */}
-            <div className="hidden md:flex items-center gap-1.5 text-xs font-medium text-slate-300 bg-slate-800/80 px-3 py-1 rounded-full border border-slate-700">
+            <div className="hidden lg:flex items-center gap-1.5 text-xs font-medium text-slate-300 bg-slate-800/80 px-3 py-1 rounded-full border border-slate-700">
               <Clock className="w-3.5 h-3.5 text-amber-400" />
               <span>{timeStr}</span>
             </div>
@@ -152,6 +192,23 @@ export default function Header({ currentRole, onRoleChange }: HeaderProps) {
 
         </div>
       </header>
+
+      {/* Start Shift Modal */}
+      {startShiftModalOpen && (
+        <StartShiftModal
+          onSuccess={() => setStartShiftModalOpen(false)}
+          onClose={() => setStartShiftModalOpen(false)}
+        />
+      )}
+
+      {/* End Shift Modal */}
+      {endShiftModalOpen && activeShift && (
+        <EndShiftModal
+          shift={activeShift}
+          onSuccess={() => setEndShiftModalOpen(false)}
+          onClose={() => setEndShiftModalOpen(false)}
+        />
+      )}
 
       {/* Owner PIN Verification Modal */}
       {isPinModalOpen && (

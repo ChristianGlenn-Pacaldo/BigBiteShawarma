@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, ShoppingBag, Boxes, Package, Receipt, TrendingUp, DollarSign, Settings, AlertTriangle } from 'lucide-react';
+import { LayoutDashboard, ShoppingBag, Boxes, Package, Receipt, TrendingUp, DollarSign, Settings, AlertTriangle, Flag } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/lib/db';
 import { UserRole } from '@/lib/types';
@@ -32,6 +32,7 @@ export default function Navigation({ currentRole }: NavigationProps) {
       badge: lowStockCount && lowStockCount > 0 ? lowStockCount : null 
     },
     { name: 'Sales Log', href: '/sales', icon: Receipt },
+    { name: 'Shifts Log', href: '/shifts', icon: Flag },
     { name: 'Expenses', href: '/expenses', icon: DollarSign },
     { name: 'Reports', href: '/reports', icon: TrendingUp, ownerOnly: true },
     { name: 'Settings', href: '/settings', icon: Settings },

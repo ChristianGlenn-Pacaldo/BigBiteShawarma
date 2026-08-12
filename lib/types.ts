@@ -88,10 +88,30 @@ export interface Sale {
   changeAmount: number;
   paymentMethod: 'cash' | 'gcash' | 'card';
   gcashRef?: string;      // Optional GCash Reference / Txn ID
+  shiftId?: string;       // Linked Shift ID
   staff: string;
   status: 'completed' | 'voided';
   voidReason?: string;
   voidDate?: string;
+}
+
+export interface Shift {
+  id: string;             // e.g. "shift-1723456789"
+  staff: string;          // Cashier / Staff Name
+  startTime: string;      // ISO timestamp
+  endTime?: string;       // ISO timestamp when closed
+  startingCash: number;   // Opening Cash Float / Petty Cash (e.g. ₱500)
+  endingCashActual?: number; // Actual physical cash counted in drawer
+  expectedCash?: number;  // startingCash + cashSales - cashExpenses
+  cashSales: number;      // Total Cash sales during shift
+  gcashSales: number;     // Total GCash sales during shift
+  totalSales: number;     // Total gross sales (Cash + GCash)
+  totalExpenses: number;  // Expenses logged during shift
+  netSales: number;       // Gross Sales - COGS - Expenses
+  itemsSold: number;      // Total units sold
+  discrepancy?: number;   // endingCashActual - expectedCash (Over/Short)
+  notes?: string;         // Closing shift notes
+  status: 'active' | 'closed';
 }
 
 export type ExpenseCategory = 
@@ -111,6 +131,7 @@ export interface Expense {
   amount: number;
   date: string;           // YYYY-MM-DD
   notes: string;
+  shiftId?: string;
 }
 
 export interface StoreSettings {

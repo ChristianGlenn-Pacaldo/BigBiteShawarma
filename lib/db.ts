@@ -1,5 +1,5 @@
 import Dexie, { type Table } from 'dexie';
-import { Product, Ingredient, InventoryMovement, Sale, Expense, StoreSettings, MovementType } from './types';
+import { Product, Ingredient, InventoryMovement, Sale, Expense, StoreSettings, MovementType, Shift } from './types';
 
 export class BigBiteDatabase extends Dexie {
   products!: Table<Product, string>;
@@ -8,6 +8,7 @@ export class BigBiteDatabase extends Dexie {
   sales!: Table<Sale, string>;
   expenses!: Table<Expense, string>;
   settings!: Table<StoreSettings, string>;
+  shifts!: Table<Shift, string>;
 
   constructor() {
     super('BigBiteShawarmaDB');
@@ -19,6 +20,16 @@ export class BigBiteDatabase extends Dexie {
       sales: 'id, timestamp, date, status, staff',
       expenses: 'id, category, date',
       settings: '++id, storeName'
+    });
+
+    this.version(2).stores({
+      products: 'id, name, category, status',
+      ingredients: 'id, name, category, currentQuantity, minimumStock',
+      inventoryMovements: 'id, ingredientId, type, date',
+      sales: 'id, timestamp, date, status, staff, shiftId',
+      expenses: 'id, category, date, shiftId',
+      settings: '++id, storeName',
+      shifts: 'id, staff, startTime, status'
     });
   }
 }
@@ -293,20 +304,123 @@ export async function initializeDatabase() {
   }
 }
 
+// Get Currently Active Shift
+export async function getActiveShift(): Promise<Shift | undefined> {
+  return await db.shifts.where('status').equals('active').first();
+}
+
+// Start New Shift
+export async function startNewShift(staff: string, startingCash: number): Promise<Shift> {
+  const existingActive = await getActiveShift();
+  if (existingActive) {
+    throw new Error(`Shift #${existingActive.id} is already active.`);
+  }
+
+  const newShift: Shift = {
+    id: `shift-${Date.now().toString().slice(-6)}`,
+    staff: staff || 'Staff 1',
+    startTime: new Date().toISOString(),
+    startingCash: startingCash || 0,
+    cashSales: 0,
+    gcashSales: 0,
+    totalSales: 0,
+    totalExpenses: 0,
+    netSales: 0,
+    itemsSold: 0,
+    status: 'active'
+  };
+
+  await db.shifts.add(newShift);
+  return newShift;
+}
+
+// End Active Shift (Z-Report Daily Closure)
+export async function endActiveShift(shiftId: string, endingCashActual: number, notes?: string): Promise<Shift> {
+  return db.transaction('rw', [db.shifts, db.sales, db.expenses], async () => {
+    const shift = await db.shifts.get(shiftId);
+    if (!shift) throw new Error(`Shift ${shiftId} not found`);
+    if (shift.status === 'closed') throw new Error(`Shift ${shiftId} is already closed`);
+
+    const endTime = new Date().toISOString();
+
+    // Query sales during shift
+    const shiftSales = await db.sales
+      .where('timestamp')
+      .aboveOrEqual(shift.startTime)
+      .and(s => s.status === 'completed')
+      .toArray();
+
+    // Query expenses during shift
+    const shiftExpenses = await db.expenses
+      .where('date')
+      .aboveOrEqual(shift.startTime.split('T')[0])
+      .toArray();
+
+    const cashSales = shiftSales
+      .filter(s => s.paymentMethod === 'cash' || !s.paymentMethod)
+      .reduce((sum, s) => sum + s.totalAmount, 0);
+
+    const gcashSales = shiftSales
+      .filter(s => s.paymentMethod === 'gcash')
+      .reduce((sum, s) => sum + s.totalAmount, 0);
+
+    const totalSales = cashSales + gcashSales;
+
+    const itemsSold = shiftSales.reduce((sum, s) => {
+      return sum + s.items.reduce((iSum, i) => iSum + i.quantity, 0);
+    }, 0);
+
+    const cogsTotal = shiftSales.reduce((sum, s) => {
+      return sum + s.items.reduce((iSum, i) => iSum + (i.cost * i.quantity), 0);
+    }, 0);
+
+    const totalExpenses = shiftExpenses.reduce((sum, e) => sum + e.amount, 0);
+    const netSales = totalSales - cogsTotal - totalExpenses;
+
+    // Expected Cash in Drawer = Starting Float + Cash Sales - Cash Expenses
+    const expectedCash = shift.startingCash + cashSales - totalExpenses;
+    const discrepancy = endingCashActual - expectedCash;
+
+    const updatedShift: Shift = {
+      ...shift,
+      endTime,
+      endingCashActual,
+      expectedCash,
+      cashSales,
+      gcashSales,
+      totalSales,
+      totalExpenses,
+      netSales,
+      itemsSold,
+      discrepancy,
+      notes: notes || '',
+      status: 'closed'
+    };
+
+    await db.shifts.put(updatedShift);
+    return updatedShift;
+  });
+}
+
 // Atomic Transaction: Complete Sale & Deduct Inventory
 export async function processSaleTransaction(saleData: Omit<Sale, 'id' | 'timestamp' | 'date'> & { id?: string }) {
   const timestamp = new Date().toISOString();
   const date = timestamp.split('T')[0];
   const saleId = saleData.id || `#BBS-${Date.now().toString().slice(-6)}`;
 
+  // Attach active shift ID if available
+  const activeShift = await getActiveShift();
+  const shiftId = activeShift?.id;
+
   const finalSale: Sale = {
     ...saleData,
     id: saleId,
     timestamp,
     date,
+    shiftId
   };
 
-  return db.transaction('rw', [db.sales, db.ingredients, db.inventoryMovements, db.products], async () => {
+  return db.transaction('rw', [db.sales, db.ingredients, db.inventoryMovements, db.products, db.shifts], async () => {
     // 1. Prevent duplicate submission if ID exists
     const existing = await db.sales.get(saleId);
     if (existing) {
@@ -489,10 +603,11 @@ export async function exportDatabaseBackup() {
   const inventoryMovements = await db.inventoryMovements.toArray();
   const sales = await db.sales.toArray();
   const expenses = await db.expenses.toArray();
+  const shifts = await db.shifts.toArray();
   const settingsArray = await db.settings.toArray();
 
   const backupData = {
-    version: 1,
+    version: 2,
     exportDate: new Date().toISOString(),
     appName: 'BIG BITE SHAWARMA POS',
     data: {
@@ -501,6 +616,7 @@ export async function exportDatabaseBackup() {
       inventoryMovements,
       sales,
       expenses,
+      shifts,
       settings: settingsArray[0] || INITIAL_SETTINGS
     }
   };
@@ -515,14 +631,15 @@ export async function importDatabaseBackup(jsonString: string) {
     throw new Error('Invalid backup file format');
   }
 
-  const { products, ingredients, inventoryMovements, sales, expenses, settings } = parsed.data;
+  const { products, ingredients, inventoryMovements, sales, expenses, shifts, settings } = parsed.data;
 
-  return db.transaction('rw', [db.products, db.ingredients, db.inventoryMovements, db.sales, db.expenses, db.settings], async () => {
+  return db.transaction('rw', [db.products, db.ingredients, db.inventoryMovements, db.sales, db.expenses, db.shifts, db.settings], async () => {
     await db.products.clear();
     await db.ingredients.clear();
     await db.inventoryMovements.clear();
     await db.sales.clear();
     await db.expenses.clear();
+    await db.shifts.clear();
     await db.settings.clear();
 
     if (products && products.length) await db.products.bulkAdd(products);
@@ -530,6 +647,7 @@ export async function importDatabaseBackup(jsonString: string) {
     if (inventoryMovements && inventoryMovements.length) await db.inventoryMovements.bulkAdd(inventoryMovements);
     if (sales && sales.length) await db.sales.bulkAdd(sales);
     if (expenses && expenses.length) await db.expenses.bulkAdd(expenses);
+    if (shifts && shifts.length) await db.shifts.bulkAdd(shifts);
     if (settings) await db.settings.add(settings);
 
     return true;
@@ -538,12 +656,13 @@ export async function importDatabaseBackup(jsonString: string) {
 
 // Reset DB to Initial Seed Data
 export async function resetDatabaseToSeed() {
-  return db.transaction('rw', [db.products, db.ingredients, db.inventoryMovements, db.sales, db.expenses, db.settings], async () => {
+  return db.transaction('rw', [db.products, db.ingredients, db.inventoryMovements, db.sales, db.expenses, db.shifts, db.settings], async () => {
     await db.products.clear();
     await db.ingredients.clear();
     await db.inventoryMovements.clear();
     await db.sales.clear();
     await db.expenses.clear();
+    await db.shifts.clear();
     await db.settings.clear();
 
     await db.products.bulkAdd(INITIAL_PRODUCTS);
