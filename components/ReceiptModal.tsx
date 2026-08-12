@@ -30,6 +30,8 @@ export default function ReceiptModal({ sale, onNewSale, onClose }: ReceiptModalP
     }
   };
 
+  const isGcash = sale.paymentMethod === 'gcash';
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
       <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 w-full max-w-md shadow-2xl relative max-h-[95vh] flex flex-col">
@@ -68,7 +70,7 @@ export default function ReceiptModal({ sale, onNewSale, onClose }: ReceiptModalP
                 <span>{sale.id}</span>
               </div>
               <div className="flex justify-between">
-                <span className="font-bold">Date & Time:</span>
+                <span className="font-bold">Date &amp; Time:</span>
                 <span>{formatDate(sale.timestamp)}</span>
               </div>
               <div className="flex justify-between">
@@ -77,8 +79,14 @@ export default function ReceiptModal({ sale, onNewSale, onClose }: ReceiptModalP
               </div>
               <div className="flex justify-between">
                 <span className="font-bold">Payment:</span>
-                <span className="uppercase">{sale.paymentMethod}</span>
+                <span className="uppercase font-black">{isGcash ? '💙 GCASH' : '💵 CASH'}</span>
               </div>
+              {isGcash && sale.gcashRef && (
+                <div className="flex justify-between text-[11px]">
+                  <span className="font-bold">GCash Ref #:</span>
+                  <span className="font-mono font-bold">{sale.gcashRef}</span>
+                </div>
+              )}
             </div>
 
             {/* Itemized List */}
@@ -107,7 +115,7 @@ export default function ReceiptModal({ sale, onNewSale, onClose }: ReceiptModalP
                 <span>{formatPHP(sale.totalAmount)}</span>
               </div>
               <div className="flex justify-between text-xs">
-                <span>CASH PAID:</span>
+                <span>{isGcash ? 'GCASH PAID:' : 'CASH PAID:'}</span>
                 <span>{formatPHP(sale.paymentAmount)}</span>
               </div>
               <div className="flex justify-between text-xs font-bold">

@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/lib/db';
 import { formatPHP, formatQuantity } from '@/lib/utils';
-import { Download, Calendar, Award, Layers } from 'lucide-react';
+import { Download, Calendar, Award, Layers, Banknote, Smartphone } from 'lucide-react';
 
 export default function ReportsPage() {
   const [rangeType, setRangeType] = useState<'today' | 'yesterday' | 'week' | 'month' | 'custom'>('today');
@@ -67,6 +67,9 @@ export default function ReportsPage() {
 
   // Financial Calculations
   const grossSales = filteredSales.reduce((sum, s) => sum + s.totalAmount, 0);
+  const cashSalesTotal = filteredSales.filter(s => s.paymentMethod === 'cash' || !s.paymentMethod).reduce((sum, s) => sum + s.totalAmount, 0);
+  const gcashSalesTotal = filteredSales.filter(s => s.paymentMethod === 'gcash').reduce((sum, s) => sum + s.totalAmount, 0);
+
   const cogsTotal = filteredSales.reduce((sum, s) => {
     return sum + s.items.reduce((iSum, item) => iSum + (item.cost * item.quantity), 0);
   }, 0);
@@ -120,6 +123,8 @@ export default function ReportsPage() {
       [''],
       ['FINANCIAL SUMMARY'],
       ['Gross Sales (PHP)', grossSales],
+      ['Cash Revenue (PHP)', cashSalesTotal],
+      ['GCash Revenue (PHP)', gcashSalesTotal],
       ['Cost of Goods Sold (COGS) (PHP)', cogsTotal],
       ['Total Operational Expenses (PHP)', totalExpenses],
       ['Net Profit (PHP)', netProfit],
@@ -154,7 +159,7 @@ export default function ReportsPage() {
             Financial &amp; Analytics Reports
           </h2>
           <p className="text-xs text-slate-400 mt-1 font-medium">
-            Daily, weekly, &amp; monthly profit analysis, best sellers, and raw ingredient consumption
+            Daily, weekly, &amp; monthly profit analysis, Cash vs GCash revenue, best sellers, &amp; raw ingredient consumption
           </p>
         </div>
 
@@ -215,9 +220,14 @@ export default function ReportsPage() {
           <span className="text-3xl font-black text-amber-400 tracking-tight mt-1 block">
             {formatPHP(grossSales)}
           </span>
-          <span className="text-[11px] text-slate-400 font-semibold mt-2 block">
-            {filteredSales.length} transactions
-          </span>
+          <div className="flex items-center justify-between text-[11px] text-slate-400 font-semibold mt-2 pt-2 border-t border-slate-800">
+            <span className="flex items-center gap-1 text-emerald-400">
+              <Banknote className="w-3.5 h-3.5" /> Cash: {formatPHP(cashSalesTotal)}
+            </span>
+            <span className="flex items-center gap-1 text-blue-400">
+              <Smartphone className="w-3.5 h-3.5" /> GCash: {formatPHP(gcashSalesTotal)}
+            </span>
+          </div>
         </div>
 
         <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-xl">

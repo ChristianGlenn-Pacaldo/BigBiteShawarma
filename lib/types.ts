@@ -87,6 +87,7 @@ export interface Sale {
   paymentAmount: number;
   changeAmount: number;
   paymentMethod: 'cash' | 'gcash' | 'card';
+  gcashRef?: string;      // Optional GCash Reference / Txn ID
   staff: string;
   status: 'completed' | 'voided';
   voidReason?: string;

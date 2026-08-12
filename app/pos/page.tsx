@@ -5,7 +5,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db, processSaleTransaction } from '@/lib/db';
 import { Product, CartItem, ProductVariant, Sale } from '@/lib/types';
 import { formatPHP } from '@/lib/utils';
-import { ShoppingCart, Plus, Minus, Trash2, Banknote, Search, Sparkles } from 'lucide-react';
+import { ShoppingCart, Plus, Minus, Trash2, Banknote, Search, Sparkles, Smartphone } from 'lucide-react';
 import PaymentModal from '@/components/PaymentModal';
 import ReceiptModal from '@/components/ReceiptModal';
 
@@ -15,6 +15,7 @@ export default function POSPage() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [activeMultiplier, setActiveMultiplier] = useState<number>(1);
   const [isPaymentOpen, setIsPaymentOpen] = useState<boolean>(false);
+  const [paymentModalMethod, setPaymentModalMethod] = useState<'cash' | 'gcash'>('cash');
   const [completedSale, setCompletedSale] = useState<Sale | null>(null);
   const [isHydrated, setIsHydrated] = useState<boolean>(false);
 
@@ -149,14 +150,26 @@ export default function POSPage() {
     }
   };
 
+  const handleOpenPayment = (method: 'cash' | 'gcash') => {
+    setPaymentModalMethod(method);
+    setIsPaymentOpen(true);
+  };
+
   // Process Completed Sale
-  const handleCompleteSale = async (paymentAmount: number, changeAmount: number, staffName: string) => {
+  const handleCompleteSale = async (
+    paymentAmount: number,
+    changeAmount: number,
+    staffName: string,
+    paymentMethod: 'cash' | 'gcash' = 'cash',
+    gcashRef?: string
+  ) => {
     const saleData = {
       items: cart,
       totalAmount,
       paymentAmount,
       changeAmount,
-      paymentMethod: 'cash' as const,
+      paymentMethod,
+      gcashRef: gcashRef || '',
       staff: staffName || 'Staff 1',
       status: 'completed' as const
     };
@@ -379,7 +392,7 @@ export default function POSPage() {
         </div>
 
         {/* Ticket Footer & Payment Triggers */}
-        <div className="pt-4 border-t border-slate-800 space-y-4">
+        <div className="pt-4 border-t border-slate-800 space-y-3">
           <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800">
             <div className="flex justify-between items-center text-xs text-slate-400 mb-1 font-medium">
               <span>Subtotal:</span>
@@ -395,14 +408,30 @@ export default function POSPage() {
             </div>
           </div>
 
-          <button
-            onClick={() => setIsPaymentOpen(true)}
-            disabled={cart.length === 0}
-            className="w-full bg-gradient-to-r from-brand-600 via-amber-500 to-amber-600 text-white font-extrabold text-lg py-4 rounded-2xl shadow-xl shadow-brand-600/30 hover:brightness-110 active:scale-98 transition disabled:opacity-40 disabled:pointer-events-none flex items-center justify-center gap-2"
-          >
-            <Banknote className="w-6 h-6" />
-            <span>CASH PAYMENT</span>
-          </button>
+          {/* Payment Method Action Buttons Grid */}
+          <div className="grid grid-cols-2 gap-2">
+            
+            {/* CASH PAYMENT BUTTON */}
+            <button
+              onClick={() => handleOpenPayment('cash')}
+              disabled={cart.length === 0}
+              className="bg-gradient-to-r from-brand-600 to-amber-500 text-white font-extrabold text-sm py-3.5 px-3 rounded-2xl shadow-lg shadow-brand-600/30 hover:brightness-110 active:scale-98 transition disabled:opacity-40 disabled:pointer-events-none flex items-center justify-center gap-1.5"
+            >
+              <Banknote className="w-5 h-5" />
+              <span>CASH</span>
+            </button>
+
+            {/* GCASH PAYMENT BUTTON */}
+            <button
+              onClick={() => handleOpenPayment('gcash')}
+              disabled={cart.length === 0}
+              className="bg-gradient-to-r from-blue-600 to-sky-500 text-white font-extrabold text-sm py-3.5 px-3 rounded-2xl shadow-lg shadow-blue-500/30 hover:brightness-110 active:scale-98 transition disabled:opacity-40 disabled:pointer-events-none flex items-center justify-center gap-1.5"
+            >
+              <Smartphone className="w-5 h-5" />
+              <span>GCASH</span>
+            </button>
+
+          </div>
         </div>
 
       </div>
@@ -412,6 +441,7 @@ export default function POSPage() {
         <PaymentModal
           cart={cart}
           totalAmount={totalAmount}
+          initialMethod={paymentModalMethod}
           onCompleteSale={handleCompleteSale}
           onClose={() => setIsPaymentOpen(false)}
         />
