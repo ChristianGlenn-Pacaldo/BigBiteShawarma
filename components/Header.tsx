@@ -68,11 +68,14 @@ export default function Header({ currentRole, onRoleChange }: HeaderProps) {
           
           {/* Brand Logo & Name */}
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-amber-500 p-0.5 shadow-md shadow-brand-500/20 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-amber-500 p-0.5 shadow-md shadow-brand-500/20 flex items-center justify-center shrink-0">
               <img
                 src="/logo.png"
                 alt="Big Bite Shawarma"
-                className="w-full h-full object-cover rounded-[10px]"
+                width={40}
+                height={40}
+                style={{ maxWidth: '40px', maxHeight: '40px' }}
+                className="w-10 h-10 object-contain rounded-[10px]"
                 onError={(e) => {
                   (e.target as HTMLElement).style.display = 'none';
                 }}

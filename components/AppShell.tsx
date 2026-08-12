@@ -27,8 +27,15 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   if (!isDbReady) {
     return (
       <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-slate-100 p-4">
-        <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-brand-600 to-amber-500 p-1 animate-pulse flex items-center justify-center shadow-xl mb-4">
-          <img src="/logo.png" alt="Big Bite Shawarma" className="w-full h-full object-cover rounded-xl" />
+        <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-brand-600 to-amber-500 p-1 animate-pulse flex items-center justify-center shadow-xl mb-4 shrink-0">
+          <img
+            src="/logo.png"
+            alt="Big Bite Shawarma"
+            width={64}
+            height={64}
+            style={{ maxWidth: '64px', maxHeight: '64px' }}
+            className="w-full h-full object-cover rounded-xl"
+          />
         </div>
         <h2 className="text-xl font-bold tracking-wide">BIG BITE SHAWARMA</h2>
         <p className="text-xs text-amber-400 font-semibold mt-1">Initializing Offline Database...</p>
