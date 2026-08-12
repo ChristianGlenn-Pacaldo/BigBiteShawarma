@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/lib/db';
 import { formatPHP, formatDate } from '@/lib/utils';
-import { DollarSign, ShoppingBag, TrendingUp, AlertTriangle, PackageX, ArrowUpRight, Boxes } from 'lucide-react';
+import { DollarSign, ShoppingBag, TrendingUp, AlertTriangle, PackageX, ArrowUpRight, Boxes, Smartphone, Banknote } from 'lucide-react';
 import RestockModal from '@/components/RestockModal';
 import ExpenseModal from '@/components/ExpenseModal';
 
@@ -38,6 +38,14 @@ export default function DashboardPage() {
     return sum + s.items.reduce((iSum, item) => iSum + item.quantity, 0);
   }, 0);
 
+  const gcashSalesToday = todaySales
+    .filter(s => s.paymentMethod === 'gcash')
+    .reduce((sum, s) => sum + s.totalAmount, 0);
+  const gcashOrdersCount = todaySales.filter(s => s.paymentMethod === 'gcash').length;
+  const cashSalesToday = todaySales
+    .filter(s => s.paymentMethod === 'cash' || !s.paymentMethod)
+    .reduce((sum, s) => sum + s.totalAmount, 0);
+
   const cogsTotal = todaySales.reduce((sum, s) => {
     return sum + s.items.reduce((iSum, item) => iSum + (item.cost * item.quantity), 0);
   }, 0);
@@ -59,7 +67,7 @@ export default function DashboardPage() {
             Store Overview Dashboard
           </h2>
           <p className="text-xs text-slate-400 mt-1 font-medium">
-            Real-time daily sales, inventory levels, &amp; profit calculations
+            Real-time daily sales, GCash payments, inventory levels, &amp; profit calculations
           </p>
         </div>
 
@@ -157,23 +165,24 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Expenses & Low Stock Summary */}
-        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-xl relative overflow-hidden group">
+        {/* GCash Sales Today Card (Replaces Stock Alerts as requested) */}
+        <div className="bg-slate-900 border border-blue-900/60 rounded-3xl p-5 shadow-xl relative overflow-hidden group">
           <div className="flex justify-between items-start mb-3">
             <div>
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">
-                Stock Alerts
+              <span className="text-xs font-bold text-blue-400 uppercase tracking-wider flex items-center gap-1">
+                <span>GCash Sales Today</span>
               </span>
-              <span className="text-3xl font-black text-amber-400 tracking-tight mt-1 block">
-                {lowStockItems.length + outOfStockItems.length} <span className="text-sm font-bold text-slate-400">items</span>
+              <span className="text-3xl font-black text-blue-400 tracking-tight mt-1 block">
+                {formatPHP(gcashSalesToday)}
               </span>
             </div>
-            <div className="w-12 h-12 rounded-2xl bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center">
-              <AlertTriangle className="w-6 h-6" />
+            <div className="w-12 h-12 rounded-2xl bg-blue-600/20 text-blue-400 border border-blue-500/30 flex items-center justify-center">
+              <Smartphone className="w-6 h-6" />
             </div>
           </div>
-          <div className="text-[11px] font-semibold text-slate-400">
-            {outOfStockItems.length} out of stock, {lowStockItems.length} low stock
+          <div className="text-[11px] font-semibold text-slate-400 flex items-center justify-between">
+            <span>{gcashOrdersCount} GCash {gcashOrdersCount === 1 ? 'order' : 'orders'}</span>
+            <span className="text-emerald-400 font-bold">Cash: {formatPHP(cashSalesToday)}</span>
           </div>
         </div>
 
@@ -285,7 +294,26 @@ export default function DashboardPage() {
                       {sale.items.map(i => `${i.productName} (${i.variant.toUpperCase()}) x${i.quantity}`).join(', ')}
                     </td>
                     <td className="p-3 font-extrabold text-slate-100">{formatPHP(sale.totalAmount)}</td>
-                    <td className="p-3 text-slate-400">{formatPHP(sale.paymentAmount)} (Change {formatPHP(sale.changeAmount)})</td>
+                    <td className="p-3">
+                      {sale.paymentMethod === 'gcash' ? (
+                        <div className="space-y-0.5">
+                          <span className="bg-blue-950 text-blue-400 border border-blue-800 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase inline-flex items-center gap-1">
+                            <Smartphone className="w-3 h-3" />
+                            <span>GCash ({formatPHP(sale.paymentAmount)})</span>
+                          </span>
+                          {sale.gcashRef && (
+                            <span className="text-[10px] text-slate-400 font-mono block">
+                              Ref: #{sale.gcashRef}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="bg-emerald-950 text-emerald-400 border border-emerald-800 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase inline-flex items-center gap-1">
+                          <Banknote className="w-3 h-3" />
+                          <span>Cash ({formatPHP(sale.paymentAmount)})</span>
+                        </span>
+                      )}
+                    </td>
                     <td className="p-3 font-medium text-slate-300">{sale.staff}</td>
                   </tr>
                 ))}
