@@ -5,52 +5,67 @@ import Link from 'next/link';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/lib/db';
 import { formatPHP, formatDate } from '@/lib/utils';
-import { DollarSign, ShoppingBag, TrendingUp, AlertTriangle, PackageX, ArrowUpRight, Boxes, Smartphone, Banknote } from 'lucide-react';
+import { DollarSign, ShoppingBag, TrendingUp, AlertTriangle, PackageX, ArrowUpRight, Boxes, Smartphone, Banknote, Play } from 'lucide-react';
 import RestockModal from '@/components/RestockModal';
 import ExpenseModal from '@/components/ExpenseModal';
+import StartShiftModal from '@/components/StartShiftModal';
 
 export default function DashboardPage() {
   const [restockModalOpen, setRestockModalOpen] = useState(false);
   const [expenseModalOpen, setExpenseModalOpen] = useState(false);
+  const [startShiftModalOpen, setStartShiftModalOpen] = useState(false);
   const [selectedRestockId, setSelectedRestockId] = useState<string | undefined>();
 
-  const todayStr = new Date().toISOString().split('T')[0];
+  // Fetch Currently Active Shift
+  const activeShift = useLiveQuery(async () => {
+    return await db.shifts.where('status').equals('active').first();
+  }, []);
 
-  // Fetch Today's Sales
-  const todaySales = useLiveQuery(async () => {
-    return await db.sales.where('date').equals(todayStr).and(s => s.status === 'completed').toArray();
-  }, [todayStr]) || [];
+  // Fetch Active Shift Sales (If shift active, otherwise empty array -> metrics reset to 0)
+  const currentShiftSales = useLiveQuery(async () => {
+    if (!activeShift) return [];
+    return await db.sales
+      .where('timestamp')
+      .aboveOrEqual(activeShift.startTime)
+      .and(s => s.status === 'completed')
+      .toArray();
+  }, [activeShift?.startTime]) || [];
 
-  // Fetch Today's Expenses
-  const todayExpenses = useLiveQuery(async () => {
-    return await db.expenses.where('date').equals(todayStr).toArray();
-  }, [todayStr]) || [];
+  // Fetch Active Shift Expenses
+  const currentShiftExpenses = useLiveQuery(async () => {
+    if (!activeShift) return [];
+    const startDateStr = activeShift.startTime.split('T')[0];
+    return await db.expenses
+      .where('date')
+      .aboveOrEqual(startDateStr)
+      .toArray();
+  }, [activeShift?.startTime]) || [];
 
-  // Fetch All Ingredients
+  // Fetch All Ingredients for Stock Warnings
   const ingredients = useLiveQuery(async () => {
     return await db.ingredients.toArray();
   }, []) || [];
 
-  // Calculations
-  const salesTotal = todaySales.reduce((sum, s) => sum + s.totalAmount, 0);
-  const ordersCount = todaySales.length;
-  const itemsSoldCount = todaySales.reduce((sum, s) => {
+  // Shift-Scoped Calculations (All default to 0 when no shift is active)
+  const salesTotal = currentShiftSales.reduce((sum, s) => sum + s.totalAmount, 0);
+  const ordersCount = currentShiftSales.length;
+  const itemsSoldCount = currentShiftSales.reduce((sum, s) => {
     return sum + s.items.reduce((iSum, item) => iSum + item.quantity, 0);
   }, 0);
 
-  const gcashSalesToday = todaySales
+  const gcashSalesToday = currentShiftSales
     .filter(s => s.paymentMethod === 'gcash')
     .reduce((sum, s) => sum + s.totalAmount, 0);
-  const gcashOrdersCount = todaySales.filter(s => s.paymentMethod === 'gcash').length;
-  const cashSalesToday = todaySales
+  const gcashOrdersCount = currentShiftSales.filter(s => s.paymentMethod === 'gcash').length;
+  const cashSalesToday = currentShiftSales
     .filter(s => s.paymentMethod === 'cash' || !s.paymentMethod)
     .reduce((sum, s) => sum + s.totalAmount, 0);
 
-  const cogsTotal = todaySales.reduce((sum, s) => {
+  const cogsTotal = currentShiftSales.reduce((sum, s) => {
     return sum + s.items.reduce((iSum, item) => iSum + (item.cost * item.quantity), 0);
   }, 0);
 
-  const expensesTotal = todayExpenses.reduce((sum, e) => sum + e.amount, 0);
+  const expensesTotal = currentShiftExpenses.reduce((sum, e) => sum + e.amount, 0);
   const estimatedProfit = salesTotal - cogsTotal - expensesTotal;
 
   // Stock Warnings
@@ -63,23 +78,46 @@ export default function DashboardPage() {
       {/* Header Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-r from-slate-900 via-slate-850 to-brand-950/40 p-6 rounded-3xl border border-slate-800 shadow-xl">
         <div>
-          <h2 className="text-2xl font-black tracking-tight text-white flex items-center gap-2">
-            Store Overview Dashboard
-          </h2>
+          <div className="flex items-center gap-2">
+            <h2 className="text-2xl font-black tracking-tight text-white">
+              Store Overview Dashboard
+            </h2>
+            {activeShift ? (
+              <span className="text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                <span>SHIFT ACTIVE ({activeShift.staff})</span>
+              </span>
+            ) : (
+              <span className="text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700">
+                NO ACTIVE SHIFT
+              </span>
+            )}
+          </div>
           <p className="text-xs text-slate-400 mt-1 font-medium">
-            Real-time daily sales, GCash payments, inventory levels, &amp; profit calculations
+            Active shift sales, GCash payments, inventory levels, &amp; profit calculations
           </p>
         </div>
 
         {/* Quick Actions */}
         <div className="flex flex-wrap items-center gap-2">
-          <Link
-            href="/pos"
-            className="flex items-center gap-1.5 bg-gradient-to-r from-brand-600 to-amber-500 text-white font-extrabold text-xs px-4 py-2.5 rounded-xl shadow-lg hover:brightness-110 active:scale-95 transition"
-          >
-            <ShoppingBag className="w-4 h-4" />
-            <span>NEW POS SALE</span>
-          </Link>
+          {activeShift ? (
+            <Link
+              href="/pos"
+              className="flex items-center gap-1.5 bg-gradient-to-r from-brand-600 to-amber-500 text-white font-extrabold text-xs px-4 py-2.5 rounded-xl shadow-lg hover:brightness-110 active:scale-95 transition"
+            >
+              <ShoppingBag className="w-4 h-4" />
+              <span>NEW POS SALE</span>
+            </Link>
+          ) : (
+            <button
+              onClick={() => setStartShiftModalOpen(true)}
+              className="flex items-center gap-1.5 bg-gradient-to-r from-emerald-600 to-teal-500 text-white font-extrabold text-xs px-4 py-2.5 rounded-xl shadow-lg hover:brightness-110 active:scale-95 transition"
+            >
+              <Play className="w-4 h-4 ml-0.5" />
+              <span>START NEW SHIFT</span>
+            </button>
+          )}
+
           <button
             onClick={() => {
               setSelectedRestockId(undefined);
@@ -90,6 +128,7 @@ export default function DashboardPage() {
             <Boxes className="w-4 h-4" />
             <span>RESTOCK</span>
           </button>
+
           <button
             onClick={() => setExpenseModalOpen(true)}
             className="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-emerald-400 font-bold text-xs px-3.5 py-2.5 rounded-xl border border-slate-700 transition"
@@ -100,15 +139,38 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* KPI Cards Grid */}
+      {/* No Active Shift Notice Banner */}
+      {!activeShift && (
+        <div className="bg-slate-900/90 border border-slate-800 p-5 rounded-3xl shadow-xl flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center shrink-0">
+              <Play className="w-5 h-5 ml-0.5" />
+            </div>
+            <div>
+              <h3 className="font-extrabold text-sm text-slate-100">No Shift Currently Active</h3>
+              <p className="text-xs text-slate-400">
+                Dashboard metrics reset to ₱0 after ending a shift. Start a new shift to record sales!
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => setStartShiftModalOpen(true)}
+            className="bg-gradient-to-r from-emerald-600 to-teal-500 text-white font-extrabold text-xs px-4 py-2.5 rounded-xl shadow transition shrink-0"
+          >
+            START SHIFT NOW
+          </button>
+        </div>
+      )}
+
+      {/* KPI Cards Grid (Reflects Active Shift Data) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         
-        {/* Today's Sales Card */}
+        {/* Active Shift Sales Card */}
         <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-xl relative overflow-hidden group">
           <div className="flex justify-between items-start mb-3">
             <div>
               <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">
-                Today&apos;s Sales
+                Shift Sales
               </span>
               <span className="text-3xl font-black text-amber-400 tracking-tight mt-1 block">
                 {formatPHP(salesTotal)}
@@ -119,7 +181,7 @@ export default function DashboardPage() {
             </div>
           </div>
           <div className="text-[11px] font-semibold text-slate-400 flex items-center gap-1">
-            <span className="text-emerald-400 font-bold">{ordersCount} orders</span> completed today
+            <span className="text-emerald-400 font-bold">{ordersCount} orders</span> completed in shift
           </div>
         </div>
 
@@ -148,7 +210,7 @@ export default function DashboardPage() {
           <div className="flex justify-between items-start mb-3">
             <div>
               <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">
-                Estimated Net Profit
+                Shift Net Profit
               </span>
               <span className={`text-3xl font-black tracking-tight mt-1 block ${
                 estimatedProfit >= 0 ? 'text-emerald-400' : 'text-red-400'
@@ -165,12 +227,12 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* GCash Sales Today Card (Replaces Stock Alerts as requested) */}
+        {/* GCash Sales Card */}
         <div className="bg-slate-900 border border-blue-900/60 rounded-3xl p-5 shadow-xl relative overflow-hidden group">
           <div className="flex justify-between items-start mb-3">
             <div>
               <span className="text-xs font-bold text-blue-400 uppercase tracking-wider flex items-center gap-1">
-                <span>GCash Sales Today</span>
+                <span>Shift GCash Sales</span>
               </span>
               <span className="text-3xl font-black text-blue-400 tracking-tight mt-1 block">
                 {formatPHP(gcashSalesToday)}
@@ -255,10 +317,19 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Today's Transactions Log Table */}
+      {/* Active Shift Transactions Log Table */}
       <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-xl">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="font-extrabold text-base text-slate-100">Today&apos;s Transactions</h3>
+          <div>
+            <h3 className="font-extrabold text-base text-slate-100">
+              {activeShift ? 'Active Shift Transactions' : 'Recent Transactions'}
+            </h3>
+            {activeShift && (
+              <p className="text-[11px] text-slate-400">
+                Displaying orders completed during shift #{activeShift.id} ({activeShift.staff})
+              </p>
+            )}
+          </div>
           <Link
             href="/sales"
             className="text-xs font-bold text-amber-400 hover:text-amber-300 flex items-center gap-1"
@@ -268,9 +339,21 @@ export default function DashboardPage() {
           </Link>
         </div>
 
-        {todaySales.length === 0 ? (
-          <div className="text-center py-8 text-slate-500 text-xs">
-            No sales recorded yet today. Click &quot;NEW POS SALE&quot; to make a sale!
+        {currentShiftSales.length === 0 ? (
+          <div className="text-center py-8 text-slate-500 text-xs space-y-2">
+            <p>
+              {activeShift
+                ? 'No sales recorded yet during this active shift.'
+                : 'No active shift in progress. Start a shift to begin recording sales!'}
+            </p>
+            {!activeShift && (
+              <button
+                onClick={() => setStartShiftModalOpen(true)}
+                className="bg-amber-500 text-slate-950 font-extrabold text-xs px-3 py-1.5 rounded-lg shadow hover:bg-amber-400 transition"
+              >
+                Start Shift
+              </button>
+            )}
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -286,7 +369,7 @@ export default function DashboardPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800">
-                {todaySales.slice(0, 5).map(sale => (
+                {currentShiftSales.slice(0, 5).map(sale => (
                   <tr key={sale.id} className="hover:bg-slate-850/50">
                     <td className="p-3 font-mono font-bold text-amber-400">{sale.id}</td>
                     <td className="p-3 text-slate-400">{formatDate(sale.timestamp)}</td>
@@ -322,6 +405,14 @@ export default function DashboardPage() {
           </div>
         )}
       </div>
+
+      {/* Start Shift Modal */}
+      {startShiftModalOpen && (
+        <StartShiftModal
+          onSuccess={() => setStartShiftModalOpen(false)}
+          onClose={() => setStartShiftModalOpen(false)}
+        />
+      )}
 
       {/* Restock & Expense Modals */}
       {restockModalOpen && (
