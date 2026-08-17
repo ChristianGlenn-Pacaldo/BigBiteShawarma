@@ -1,9 +1,9 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, ShoppingBag, Boxes, Package, Receipt, TrendingUp, DollarSign, Settings, AlertTriangle, Flag } from 'lucide-react';
+import { LayoutDashboard, ShoppingBag, Boxes, Package, Receipt, TrendingUp, DollarSign, Settings, AlertTriangle, Flag, Menu, X } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/lib/db';
 import { UserRole } from '@/lib/types';
@@ -14,6 +14,7 @@ interface NavigationProps {
 
 export default function Navigation({ currentRole }: NavigationProps) {
   const pathname = usePathname();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Count low stock items for badge alert
   const lowStockCount = useLiveQuery(async () => {
@@ -24,6 +25,8 @@ export default function Navigation({ currentRole }: NavigationProps) {
   const navItems = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
     { name: 'POS', href: '/pos', icon: ShoppingBag },
+    { name: 'Shifts Log', href: '/shifts', icon: Flag },
+    { name: 'Sales Log', href: '/sales', icon: Receipt },
     { name: 'Products', href: '/products', icon: Package },
     { 
       name: 'Inventory', 
@@ -31,12 +34,13 @@ export default function Navigation({ currentRole }: NavigationProps) {
       icon: Boxes, 
       badge: lowStockCount && lowStockCount > 0 ? lowStockCount : null 
     },
-    { name: 'Sales Log', href: '/sales', icon: Receipt },
-    { name: 'Shifts Log', href: '/shifts', icon: Flag },
     { name: 'Expenses', href: '/expenses', icon: DollarSign },
     { name: 'Reports', href: '/reports', icon: TrendingUp, ownerOnly: true },
     { name: 'Settings', href: '/settings', icon: Settings },
   ];
+
+  // Mobile Bottom Bar items (Top 4 most used + Menu toggle)
+  const mobileBarItems = navItems.slice(0, 4);
 
   return (
     <>
@@ -91,7 +95,7 @@ export default function Navigation({ currentRole }: NavigationProps) {
       {/* Mobile Bottom Navigation Bar */}
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-slate-900/95 backdrop-blur border-t border-slate-800 px-2 py-1.5 shadow-2xl">
         <div className="flex items-center justify-around">
-          {navItems.slice(0, 5).map((item) => {
+          {mobileBarItems.map((item) => {
             if (item.ownerOnly && currentRole !== 'OWNER') return null;
 
             const isActive = pathname === item.href || (item.href === '/dashboard' && pathname === '/');
@@ -118,19 +122,83 @@ export default function Navigation({ currentRole }: NavigationProps) {
               </Link>
             );
           })}
-          
-          {/* More Settings for Mobile */}
-          <Link
-            href="/settings"
+
+          {/* More Menu Drawer Trigger button */}
+          <button
+            onClick={() => setMobileMenuOpen(true)}
             className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all ${
-              pathname === '/settings' ? 'text-brand-400 font-bold' : 'text-slate-400'
+              mobileMenuOpen ? 'text-brand-400 font-bold' : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            <Settings className="w-5 h-5" />
+            <Menu className="w-5 h-5" />
             <span className="text-[10px] tracking-tight">More</span>
-          </Link>
+          </button>
         </div>
       </nav>
+
+      {/* Mobile Full Slide-out Drawer Overlay */}
+      {mobileMenuOpen && (
+        <div className="lg:hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200 flex justify-end">
+          <div className="w-4/5 max-w-xs bg-slate-900 border-l border-slate-800 h-full p-5 flex flex-col justify-between shadow-2xl animate-in slide-in-from-right duration-200">
+            
+            <div className="space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-brand-600 to-amber-500 p-0.5 flex items-center justify-center">
+                    <img src="/logo.png" alt="Big Bite Shawarma" width={32} height={32} className="w-full h-full object-cover rounded-md" />
+                  </div>
+                  <span className="font-extrabold text-sm text-slate-100">Big Bite Navigation</span>
+                </div>
+                <button
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="text-slate-400 hover:text-white p-1 rounded-lg bg-slate-800"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="space-y-1 overflow-y-auto max-h-[70vh]">
+                {navItems.map((item) => {
+                  if (item.ownerOnly && currentRole !== 'OWNER') return null;
+
+                  const isActive = pathname === item.href || (item.href === '/dashboard' && pathname === '/');
+                  const Icon = item.icon;
+
+                  return (
+                    <Link
+                      key={item.name}
+                      href={item.href}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className={`flex items-center justify-between px-3.5 py-3 rounded-xl text-xs font-bold transition-all ${
+                        isActive
+                          ? 'bg-gradient-to-r from-brand-600 to-amber-500 text-white shadow-md'
+                          : 'text-slate-300 hover:bg-slate-800'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Icon className="w-4 h-4" />
+                        <span>{item.name}</span>
+                      </div>
+
+                      {item.badge !== null && item.badge !== undefined && (
+                        <span className="bg-amber-500 text-slate-950 text-[10px] font-black px-2 py-0.5 rounded-full">
+                          {item.badge}
+                        </span>
+                      )}
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="bg-slate-800/60 p-3 rounded-2xl border border-slate-700/50 text-[11px] text-slate-400 text-center">
+              <span className="font-bold text-slate-200 block">BIG BITE SHAWARMA POS</span>
+              <span>Role: {currentRole}</span>
+            </div>
+
+          </div>
+        </div>
+      )}
     </>
   );
 }
