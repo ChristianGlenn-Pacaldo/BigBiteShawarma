@@ -7,12 +7,10 @@ import { db } from '@/lib/db';
 import { formatPHP, formatDate } from '@/lib/utils';
 import { DollarSign, ShoppingBag, AlertTriangle, PackageX, ArrowUpRight, Boxes, Smartphone, Banknote, Play } from 'lucide-react';
 import RestockModal from '@/components/RestockModal';
-import ExpenseModal from '@/components/ExpenseModal';
 import StartShiftModal from '@/components/StartShiftModal';
 
 export default function DashboardPage() {
   const [restockModalOpen, setRestockModalOpen] = useState(false);
-  const [expenseModalOpen, setExpenseModalOpen] = useState(false);
   const [startShiftModalOpen, setStartShiftModalOpen] = useState(false);
   const [selectedRestockId, setSelectedRestockId] = useState<string | undefined>();
 
@@ -112,14 +110,6 @@ export default function DashboardPage() {
           >
             <Boxes className="w-4 h-4" />
             <span>RESTOCK</span>
-          </button>
-
-          <button
-            onClick={() => setExpenseModalOpen(true)}
-            className="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-emerald-400 font-bold text-xs px-3.5 py-2.5 rounded-xl border border-slate-700 transition"
-          >
-            <DollarSign className="w-4 h-4" />
-            <span>ADD EXPENSE</span>
           </button>
         </div>
       </div>
@@ -398,7 +388,7 @@ export default function DashboardPage() {
         />
       )}
 
-      {/* Restock & Expense Modals */}
+      {/* Restock Modal */}
       {restockModalOpen && (
         <RestockModal
           ingredients={ingredients}
@@ -406,13 +396,6 @@ export default function DashboardPage() {
           onSuccess={() => setRestockModalOpen(false)}
           onClose={() => setRestockModalOpen(false)}
           staffName="Owner"
-        />
-      )}
-
-      {expenseModalOpen && (
-        <ExpenseModal
-          onSuccess={() => setExpenseModalOpen(false)}
-          onClose={() => setExpenseModalOpen(false)}
         />
       )}
 
