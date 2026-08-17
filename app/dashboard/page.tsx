@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/lib/db';
 import { formatPHP, formatDate } from '@/lib/utils';
-import { DollarSign, ShoppingBag, TrendingUp, AlertTriangle, PackageX, ArrowUpRight, Boxes, Smartphone, Banknote, Play } from 'lucide-react';
+import { DollarSign, ShoppingBag, AlertTriangle, PackageX, ArrowUpRight, Boxes, Smartphone, Banknote, Play } from 'lucide-react';
 import RestockModal from '@/components/RestockModal';
 import ExpenseModal from '@/components/ExpenseModal';
 import StartShiftModal from '@/components/StartShiftModal';
@@ -31,22 +31,12 @@ export default function DashboardPage() {
       .toArray();
   }, [activeShift?.startTime]) || [];
 
-  // Fetch Active Shift Expenses
-  const currentShiftExpenses = useLiveQuery(async () => {
-    if (!activeShift) return [];
-    const startDateStr = activeShift.startTime.split('T')[0];
-    return await db.expenses
-      .where('date')
-      .aboveOrEqual(startDateStr)
-      .toArray();
-  }, [activeShift?.startTime]) || [];
-
   // Fetch All Ingredients for Stock Warnings
   const ingredients = useLiveQuery(async () => {
     return await db.ingredients.toArray();
   }, []) || [];
 
-  // Shift-Scoped Calculations (All default to 0 when no shift is active)
+  // Shift-Scoped Calculations
   const salesTotal = currentShiftSales.reduce((sum, s) => sum + s.totalAmount, 0);
   const ordersCount = currentShiftSales.length;
   const itemsSoldCount = currentShiftSales.reduce((sum, s) => {
@@ -57,16 +47,11 @@ export default function DashboardPage() {
     .filter(s => s.paymentMethod === 'gcash')
     .reduce((sum, s) => sum + s.totalAmount, 0);
   const gcashOrdersCount = currentShiftSales.filter(s => s.paymentMethod === 'gcash').length;
+
   const cashSalesToday = currentShiftSales
     .filter(s => s.paymentMethod === 'cash' || !s.paymentMethod)
     .reduce((sum, s) => sum + s.totalAmount, 0);
-
-  const cogsTotal = currentShiftSales.reduce((sum, s) => {
-    return sum + s.items.reduce((iSum, item) => iSum + (item.cost * item.quantity), 0);
-  }, 0);
-
-  const expensesTotal = currentShiftExpenses.reduce((sum, e) => sum + e.amount, 0);
-  const estimatedProfit = salesTotal - cogsTotal - expensesTotal;
+  const cashOrdersCount = currentShiftSales.filter(s => s.paymentMethod === 'cash' || !s.paymentMethod).length;
 
   // Stock Warnings
   const lowStockItems = ingredients.filter(i => i.currentQuantity > 0 && i.currentQuantity <= i.minimumStock);
@@ -94,7 +79,7 @@ export default function DashboardPage() {
             )}
           </div>
           <p className="text-xs text-slate-400 mt-1 font-medium">
-            Active shift sales, GCash payments, inventory levels, &amp; profit calculations
+            Active shift sales, Cash &amp; GCash payments, &amp; inventory level tracking
           </p>
         </div>
 
@@ -165,12 +150,12 @@ export default function DashboardPage() {
       {/* KPI Cards Grid (Reflects Active Shift Data) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         
-        {/* Active Shift Sales Card */}
+        {/* Active Shift Total Sales Card */}
         <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-xl relative overflow-hidden group">
           <div className="flex justify-between items-start mb-3">
             <div>
               <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">
-                Shift Sales
+                Shift Total Sales
               </span>
               <span className="text-3xl font-black text-amber-400 tracking-tight mt-1 block">
                 {formatPHP(salesTotal)}
@@ -182,6 +167,48 @@ export default function DashboardPage() {
           </div>
           <div className="text-[11px] font-semibold text-slate-400 flex items-center gap-1">
             <span className="text-emerald-400 font-bold">{ordersCount} orders</span> completed in shift
+          </div>
+        </div>
+
+        {/* Shift Cash Sales Card */}
+        <div className="bg-slate-900 border border-emerald-900/60 rounded-3xl p-5 shadow-xl relative overflow-hidden group">
+          <div className="flex justify-between items-start mb-3">
+            <div>
+              <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1">
+                <span>Shift Cash Sales</span>
+              </span>
+              <span className="text-3xl font-black text-emerald-400 tracking-tight mt-1 block">
+                {formatPHP(cashSalesToday)}
+              </span>
+            </div>
+            <div className="w-12 h-12 rounded-2xl bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center">
+              <Banknote className="w-6 h-6" />
+            </div>
+          </div>
+          <div className="text-[11px] font-semibold text-slate-400 flex items-center justify-between">
+            <span>{cashOrdersCount} Cash {cashOrdersCount === 1 ? 'order' : 'orders'}</span>
+            <span className="text-emerald-400 font-bold">Physical Cash</span>
+          </div>
+        </div>
+
+        {/* Shift GCash Sales Card */}
+        <div className="bg-slate-900 border border-blue-900/60 rounded-3xl p-5 shadow-xl relative overflow-hidden group">
+          <div className="flex justify-between items-start mb-3">
+            <div>
+              <span className="text-xs font-bold text-blue-400 uppercase tracking-wider flex items-center gap-1">
+                <span>Shift GCash Sales</span>
+              </span>
+              <span className="text-3xl font-black text-blue-400 tracking-tight mt-1 block">
+                {formatPHP(gcashSalesToday)}
+              </span>
+            </div>
+            <div className="w-12 h-12 rounded-2xl bg-blue-600/20 text-blue-400 border border-blue-500/30 flex items-center justify-center">
+              <Smartphone className="w-6 h-6" />
+            </div>
+          </div>
+          <div className="text-[11px] font-semibold text-slate-400 flex items-center justify-between">
+            <span>{gcashOrdersCount} GCash {gcashOrdersCount === 1 ? 'order' : 'orders'}</span>
+            <span className="text-blue-400 font-bold">Digital Payments</span>
           </div>
         </div>
 
@@ -202,49 +229,6 @@ export default function DashboardPage() {
           </div>
           <div className="text-[11px] font-semibold text-slate-400 flex items-center gap-1">
             Across {ordersCount} completed tickets
-          </div>
-        </div>
-
-        {/* Estimated Net Profit */}
-        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-xl relative overflow-hidden group">
-          <div className="flex justify-between items-start mb-3">
-            <div>
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">
-                Shift Net Profit
-              </span>
-              <span className={`text-3xl font-black tracking-tight mt-1 block ${
-                estimatedProfit >= 0 ? 'text-emerald-400' : 'text-red-400'
-              }`}>
-                {formatPHP(estimatedProfit)}
-              </span>
-            </div>
-            <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center">
-              <TrendingUp className="w-6 h-6" />
-            </div>
-          </div>
-          <div className="text-[11px] font-semibold text-slate-400">
-            Sales - COGS ({formatPHP(cogsTotal)}) - Expenses ({formatPHP(expensesTotal)})
-          </div>
-        </div>
-
-        {/* GCash Sales Card */}
-        <div className="bg-slate-900 border border-blue-900/60 rounded-3xl p-5 shadow-xl relative overflow-hidden group">
-          <div className="flex justify-between items-start mb-3">
-            <div>
-              <span className="text-xs font-bold text-blue-400 uppercase tracking-wider flex items-center gap-1">
-                <span>Shift GCash Sales</span>
-              </span>
-              <span className="text-3xl font-black text-blue-400 tracking-tight mt-1 block">
-                {formatPHP(gcashSalesToday)}
-              </span>
-            </div>
-            <div className="w-12 h-12 rounded-2xl bg-blue-600/20 text-blue-400 border border-blue-500/30 flex items-center justify-center">
-              <Smartphone className="w-6 h-6" />
-            </div>
-          </div>
-          <div className="text-[11px] font-semibold text-slate-400 flex items-center justify-between">
-            <span>{gcashOrdersCount} GCash {gcashOrdersCount === 1 ? 'order' : 'orders'}</span>
-            <span className="text-emerald-400 font-bold">Cash: {formatPHP(cashSalesToday)}</span>
           </div>
         </div>
 
